@@ -1,0 +1,7 @@
+data/
+.render-demo/
+*.sqlite3*
+*.db*
+*.xlsx
+.env*
+__pycache__/
