@@ -48,7 +48,7 @@ async function api(path,options={}){
  if(!r.ok){if(r.status===401&&session.user){lockSession();}const error=new Error(result.error||'تعذّر إتمام العملية');error.code=result.code;error.status=r.status;throw error;}
  return result;
 }
-function lockSession(){clearInterval(refreshTimer);sessionEpoch++;viewTicket++;session.user=null;DATA={units:[],reservations:[],requests:[],notifications:[]};managerData={};lastImport=null;ai?.destroy();ai=null;closeDetail(false);$('#appDialog').close();['dialogBody','managementView','unitContent','towerOverview','detailPanel','workflowNav','kpis','importAlert','userName','userRole','toast'].forEach(id=>$('#'+id).replaceChildren());$('#toast').hidden=true;$('#appView').hidden=true;$('#accountControls').hidden=true;$('#authView').hidden=false;$('#authError').textContent='انتهت الجلسة. سجّل الدخول مجدداً.';$('#authError').hidden=false;}
+function lockSession(){clearInterval(refreshTimer);stopOpsClock();destroyOpsViewer();document.body.classList.remove('ops-live');sessionEpoch++;viewTicket++;session.user=null;DATA={units:[],reservations:[],requests:[],notifications:[]};managerData={};lastImport=null;ai?.destroy();ai=null;closeDetail(false);$('#appDialog').close();['dialogBody','managementView','unitContent','towerOverview','detailPanel','workflowNav','kpis','importAlert','userName','userRole','toast'].forEach(id=>$('#'+id).replaceChildren());$('#toast').hidden=true;$('#appView').hidden=true;$('#accountControls').hidden=true;$('#authView').hidden=false;$('#authError').textContent='انتهت الجلسة. سجّل الدخول مجدداً.';$('#authError').hidden=false;}
 async function refresh({render=true,announce=false}={}){const epoch=sessionEpoch,previous=DATA.notifications?.[0]?.id;const next=await api('/api/bootstrap');if(epoch!==sessionEpoch||!session.user)return;DATA=next;DATA.units||=[];DATA.reservations||=[];DATA.requests||=[];DATA.notifications||=[];if(DATA.user)session.user=DATA.user;$('#lastUpdated').textContent=dateFmt(new Date().toISOString());renderNotifications();if(announce&&DATA.notifications[0]&&DATA.notifications[0].id!==previous)toast(DATA.notifications[0].message);if(render)renderApp();return DATA;}
 function renderNotifications(){const n=DATA.notifications?.length||0;$('#notificationCount').textContent=n;$('#notificationCount').hidden=!n;$('#notificationButton').setAttribute('aria-label',n?`التنبيهات، آخر ${n} تنبيهاً`:'التنبيهات');const badge=$('[data-section=approvals] span'),pending=DATA.requests.filter(r=>r.status==='pending').length;if(badge){badge.textContent=pending;badge.hidden=!pending;}}
 function showNotifications(){const rows=DATA.notifications||[];openDialog('التنبيهات',rows.length?`<p class="helper-text">آخر التنبيهات الموجّهة إلى حسابك. تُحدّث تلقائياً أثناء فتح النظام.</p><div class="notification-list">${rows.map(n=>`<article><div>${icon(n.kind==='approval'?'clock':'info')}<b>${esc(n.message)}</b></div><small>${dateFmt(n.created_at)}</small><button class="text-btn" data-action="notification-open" data-section-target="${n.kind==='sale'?'bookings':isManager()&&n.kind==='approval'?'approvals':'requests'}">فتح السجل ${icon('arrow')}</button></article>`).join('')}</div>`:empty('لا توجد تنبيهات','ستظهر هنا طلبات الإلغاء وقرارات الموافقة الخاصة بحسابك.'));}
@@ -74,7 +74,7 @@ $('#authForm').addEventListener('submit',async e=>{
  catch(err){$('#authError').textContent=err.message;$('#authError').hidden=false;try{const current=await api('/api/session');if(!session.user)session=current;}catch{}}
  finally{btn.disabled=false;}
 });
-function readRoute(){const [section,tower]=location.hash.slice(1).split('/');const allowed=isManager()?['units','bookings','requests','approvals','users','review','audit','history']:['units','bookings','requests'];state.section=allowed.includes(section)?section:'units';state.tower=allowedTowers().includes(tower)?tower:'all';}
+function readRoute(){const [section,tower]=location.hash.slice(1).split('/');const allowed=isManager()?['units','ops','bookings','requests','approvals','users','review','audit','history']:['units','bookings','requests'];state.section=allowed.includes(section)?section:'units';state.tower=allowedTowers().includes(tower)?tower:'all';}
 function route(section,tower){state.selected=null;detail=null;state.page=1;state.tower=tower||'all';state.section=section;history.pushState(null,'','#'+section+(tower?'/'+tower:''));renderApp();}
 function baseUnits(){return DATA.units.filter(u=>state.tower==='all'||u.tower===state.tower);}
 function matches(u){if(state.q&&!u.code.toLowerCase().includes(state.q))return false;if(state.status!=='all'&&u.status!==state.status)return false;if(state.view!=='all'&&u.view!==state.view)return false;if(state.area!=='all'&&String(u.area)!==state.area)return false;if(state.review==='required'&&!u.review_required)return false;if(state.review==='verified'&&u.review_required)return false;if(state.band!=='all'){const[a,b]=state.band.split('-').map(Number);if(u.floor<a||u.floor>b)return false;}return true;}
@@ -84,15 +84,17 @@ function renderApp(){
  if(!session.user)return;
  $('#userName').textContent=session.user.name;$('#userRole').textContent=isManager()?'مدير المبيعات':'موظف المبيعات';
  const pending=DATA.requests.filter(r=>r.status==='pending').length,reviewCount=DATA.units.filter(u=>u.review_required).length;
- const nav=[['units','الوحدات','grid'],['bookings',isManager()?'الحجوزات':'حجوزاتي','building'],['requests','طلباتي','clock'],...(isManager()?[['approvals','الموافقات','check',pending],['review','البيانات والمراجعة','sheet',reviewCount],['users','الموظفون والصلاحيات','user'],['audit','سجل الإجراءات','shield'],['history','سجل المصدر','archive']]:[])];
+ const nav=[['units','الوحدات','grid'],['bookings',isManager()?'الحجوزات':'حجوزاتي','building'],['requests','طلباتي','clock'],...(isManager()?[['ops','غرفة العمليات','chart'],['approvals','الموافقات','check',pending],['review','البيانات والمراجعة','sheet',reviewCount],['users','الموظفون والصلاحيات','user'],['audit','سجل الإجراءات','shield'],['history','سجل المصدر','archive']]:[])];
  $('#workflowNav').innerHTML=nav.map(([key,label,ico,n])=>`<button class="workflow-tab${state.section===key?' is-active':''}" data-section="${key}" aria-current="${state.section===key?'page':'false'}">${icon(ico)}${label}${n?`<span>${n}</span>`:''}</button>`).join('');
  $('#unitsView').hidden=state.section!=='units';$('#managementView').hidden=state.section==='units';
- const titles={units:'سجل الوحدات',bookings:isManager()?'سجل الحجوزات':'حجوزاتي',requests:'طلبات الإلغاء',approvals:'مركز الموافقات',review:'البيانات والمراجعة',users:'الموظفون والصلاحيات',audit:'سجل الإجراءات',history:'سجل المصدر'};
- const intros={units:'بيانات ملف المبيعات، مع تمييز الوحدات التي تحتاج مراجعة.',bookings:'الحجوزات الحالية وتاريخها، مع إجراءات حسب الصلاحية.',requests:'تابع طلباتك وقرار المدير بشأن كل طلب.',approvals:'راجع سبب الإلغاء قبل اعتماد الطلب أو رفضه.',review:'طابق بيانات المصدر واعتمد الحالات غير المحسومة.',users:'حساب مستقل ونطاق أبراج محدد لكل موظف.',audit:'سجل زمني للتغييرات وقرارات الاعتماد.',history:'الحركات الأصلية من ملف Excel، محفوظة مع مصدرها.'};
+ const titles={units:'سجل الوحدات',ops:'غرفة العمليات',bookings:isManager()?'سجل الحجوزات':'حجوزاتي',requests:'طلبات الإلغاء',approvals:'مركز الموافقات',review:'البيانات والمراجعة',users:'الموظفون والصلاحيات',audit:'سجل الإجراءات',history:'سجل المصدر'};
+ const intros={units:'بيانات ملف المبيعات، مع تمييز الوحدات التي تحتاج مراجعة.',ops:'لوحة العرض الحيّة لحالة المشروع، مخصّصة للشاشة الكبيرة.',bookings:'الحجوزات الحالية وتاريخها، مع إجراءات حسب الصلاحية.',requests:'تابع طلباتك وقرار المدير بشأن كل طلب.',approvals:'راجع سبب الإلغاء قبل اعتماد الطلب أو رفضه.',review:'طابق بيانات المصدر واعتمد الحالات غير المحسومة.',users:'حساب مستقل ونطاق أبراج محدد لكل موظف.',audit:'سجل زمني للتغييرات وقرارات الاعتماد.',history:'الحركات الأصلية من ملف Excel، محفوظة مع مصدرها.'};
  $('#pageTitle').innerHTML=titles[state.section]+'<span class="title-dot">.</span>';$('#pageIntro').textContent=intros[state.section];$('#pageContext').textContent=isManager()?'إدارة المبيعات':'مساحة الموظف';
  $('#pageActions').innerHTML=`<button class="btn" data-action="refresh">${icon('clock')}تحديث</button>${state.section==='units'?`<button class="btn" data-action="print">${icon('print')}طباعة</button>${isManager()?`<button class="btn" data-action="upload">${icon('upload')}استيراد</button><button class="btn" data-action="export">${icon('download')}تصدير</button>`:''}`:''}${state.section==='users'?`<button class="btn solid" data-action="new-user">${icon('plus')}إضافة موظف</button>`:''}${state.section==='review'?`<button class="btn solid" data-action="upload">${icon('upload')}استيراد Excel</button>`:''}`;
  $('#importAlert').hidden=!isManager()||!reviewCount||state.section!=='units';
  $('#importAlert').innerHTML=`${icon('info')}<span><b>${fmt(reviewCount)} وحدة تحتاج مراجعة.</b> الحجز متاح فقط للوحدات المعتمدة والمتاحة.</span><button class="text-btn" data-section="review">فتح المراجعة ${icon('arrow')}</button>`;
+ document.body.classList.toggle('ops-live',state.section==='ops');
+ if(state.section!=='ops'){stopOpsClock();destroyOpsViewer();}
  if(state.section==='units')renderUnits();else{closeDetail(false);renderManagement();}
 }
 function renderUnits(){
@@ -158,6 +160,7 @@ function empty(title,desc=''){return `<div class="empty-state"><div class="empty
 async function renderManagement(){
  const section=state.section,ticket=++viewTicket,host=$('#managementView');host.innerHTML='<div class="management-card loading-state">جارٍ تحميل البيانات…</div>';
  try{
+  if(section==='ops'){managerData={};renderOps();return;}
   if(section==='bookings'){managerData={};renderBookings();return;}
   if(section==='requests'||section==='approvals'){managerData={};renderRequests();return;}
   const endpoint={users:'/api/users',review:'/api/reviews',audit:'/api/audit',history:'/api/history'}[section];
@@ -165,6 +168,391 @@ async function renderManagement(){
   if(section==='users')renderUsers();if(section==='review')renderReviews();if(section==='audit')renderAudit();if(section==='history')renderHistory();
  }catch(e){if(ticket===viewTicket)host.innerHTML=empty('تعذّر تحميل البيانات',e.message);}
 }
+/* =============================================================================
+   غرفة العمليات — شاشة العرض الدائمة (Operations Room)
+   تُطبّق المرجعية التصميمية الموثّقة في style.css تحت العنوان نفسه.
+   كل الأرقام محسوبة من DATA الحيّة — لا قيم ثابتة ولا بيانات تجريبية.
+   ============================================================================= */
+
+const OPS_MAX_TICKER = 15;
+const OPS_TALLEST = Math.max(...Object.values(TYPES).map(t => t.floors));
+const OPS_MONTHS = 12;
+const opsArName = new Intl.DateTimeFormat('ar-IQ', {timeZone: 'Asia/Baghdad', month: 'short'});
+let opsClock = null, opsViewer = null, opsTowerKey = null, opsFloor = null;
+
+function opsUnits(){return DATA.units||[];}
+function opsPct(part, whole){return whole ? Math.round(part / whole * 100) : 0;}
+
+// --- تجميع الحجوزات على آخر 12 شهراً، بالتقويم الميلادي وتوقيت بغداد ---
+function opsMonthly(){
+ const buckets = [];
+ const now = new Date();
+ for(let i = OPS_MONTHS - 1; i >= 0; i--){
+  const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+  buckets.push({key: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'), label: opsArName.format(d), reserved: 0, sold: 0});
+ }
+ const index = new Map(buckets.map(b => [b.key, b]));
+ (DATA.reservations||[]).forEach(r => {
+  const raw = r.created_at || r.source_date;
+  if(!raw) return;                                   // سجل مستورد بتاريخ مجهول — لا يُحتسب
+  const d = new Date(raw);
+  if(isNaN(d)) return;
+  const b = index.get(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+  if(!b) return;
+  if(r.status === 'sold') b.sold++;
+  else if(r.status === 'active') b.reserved++;
+ });
+ return buckets;
+}
+
+// --- عدّاد قوسي: نسبة البيع من إجمالي الوحدات ---
+function opsGauge(value){
+ const R = 92, CX = 110, CY = 116, SPAN = 250, START = 145;
+ const pt = (deg, r) => [CX + r * Math.cos(deg * Math.PI / 180), CY + r * Math.sin(deg * Math.PI / 180)];
+ const arc = (from, to, r) => {
+  const [x1, y1] = pt(from, r), [x2, y2] = pt(to, r);
+  return `M${x1.toFixed(2)} ${y1.toFixed(2)} A${r} ${r} 0 ${to - from > 180 ? 1 : 0} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+ };
+ const end = START + SPAN * (value / 100);
+ const ticks = Array.from({length: 26}, (_, i) => {
+  const deg = START + SPAN * (i / 25), on = deg <= end;
+  const [x1, y1] = pt(deg, R - 16), [x2, y2] = pt(deg, R - (i % 5 === 0 ? 27 : 23));
+  return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" class="ops-tick${on ? ' on' : ''}"/>`;
+ }).join('');
+ return `<svg viewBox="12 12 196 180" class="ops-gauge" role="img" aria-label="نسبة البيع ${value} بالمئة">
+  <path d="${arc(START, START + SPAN, R)}" class="ops-arc-bg"/>
+  <path d="${arc(START, end, R)}" class="ops-arc-on"/>
+  ${ticks}
+  <text x="${CX}" y="${CY - 2}" class="ops-gauge-value">${value}<tspan class="ops-gauge-pct">%</tspan></text>
+  <text x="${CX}" y="${CY + 24}" class="ops-gauge-label">نسبة البيع</text>
+ </svg>`;
+}
+
+// --- مخطط مساحي مزدوج: المبيعات والحجوزات شهرياً ---
+function opsTrend(rows){
+ const W = 600, H = 190, PAD_X = 10, PAD_Y = 14;
+ const peak = Math.max(4, ...rows.map(r => Math.max(r.sold, r.reserved)));
+ const x = i => PAD_X + (W - PAD_X * 2) * (rows.length < 2 ? .5 : i / (rows.length - 1));
+ const y = v => H - PAD_Y - (H - PAD_Y * 2) * (v / peak);
+ const line = key => rows.map((r, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(r[key]).toFixed(1)}`).join(' ');
+ const area = key => `${line(key)} L${x(rows.length - 1).toFixed(1)} ${H - PAD_Y} L${x(0).toFixed(1)} ${H - PAD_Y} Z`;
+ const grid = [0, .5, 1].map(f => `<line x1="${PAD_X}" y1="${y(peak * f).toFixed(1)}" x2="${W - PAD_X}" y2="${y(peak * f).toFixed(1)}" class="ops-grid"/>`).join('');
+ const labels = rows.map((r, i) => `<span>${i % 2 ? '' : esc(r.label)}</span>`).join('');
+ const dots = rows.map((r, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(r.sold).toFixed(1)}" r="3" class="ops-dot-sold"/>`).join('');
+ return `<div class="ops-trend-wrap"><svg viewBox="0 0 ${W} ${H}" class="ops-trend" preserveAspectRatio="none" role="img" aria-label="منحنى المبيعات والحجوزات الشهري">
+  <defs>
+   <linearGradient id="opsFillSold" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#38D8F5" stop-opacity=".42"/><stop offset="1" stop-color="#38D8F5" stop-opacity="0"/></linearGradient>
+   <linearGradient id="opsFillRes" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#F2B441" stop-opacity=".26"/><stop offset="1" stop-color="#F2B441" stop-opacity="0"/></linearGradient>
+  </defs>
+  ${grid}
+  <path d="${area('reserved')}" fill="url(#opsFillRes)"/><path d="${line('reserved')}" class="ops-line-res"/>
+  <path d="${area('sold')}" fill="url(#opsFillSold)"/><path d="${line('sold')}" class="ops-line-sold"/>
+  ${dots}
+ </svg><div class="ops-axis-row">${labels}</div></div>`;
+}
+
+// --- برج مرسوم بالكود: كل طابق شريط يأخذ لون الحالة الغالبة فيه ---
+function opsTower(tower){
+ const type = TYPES[tower[0]], floors = type.floors;
+ const us = opsUnits().filter(u => u.tower === tower);
+ const c = counts(us);
+ const pct = opsPct(c.sold, us.length);
+ const W = 60, BAR = 4, GAP = 1.4, H = floors * (BAR + GAP) + 26;
+ const share = (floors / OPS_TALLEST).toFixed(3);   // الفارق الحقيقي بين نمط A ونمط C يبقى مقروءاً
+ const byFloor = new Map();
+ us.forEach(u => {
+  const f = byFloor.get(u.floor) || {available: 0, reserved: 0, sold: 0, other: 0};
+  f[u.status === 'available' || u.status === 'reserved' || u.status === 'sold' ? u.status : 'other']++;
+  byFloor.set(u.floor, f);
+ });
+ const bars = Array.from({length: floors}, (_, i) => {
+  const floor = floors - i, f = byFloor.get(floor);
+  const cls = !f ? 'none' : f.sold >= f.reserved && f.sold >= f.available ? 'sold' : f.reserved >= f.available ? 'reserved' : 'available';
+  return `<rect x="9" y="${(i * (BAR + GAP) + 20).toFixed(1)}" width="${W - 18}" height="${BAR}" rx="1" class="ops-floor ${cls}"/>`;
+ }).join('');
+ return `<button class="ops-tower" data-tower="${tower}" style="--ops-share:${share}" aria-label="برج ${tower}، مباع ${pct} بالمئة">
+  <svg viewBox="0 0 ${W} ${H}" class="ops-tower-svg" preserveAspectRatio="none" aria-hidden="true">
+   <path d="M9 20 L${W / 2} 11 L${W - 9} 20 Z" class="ops-crown"/>
+   ${bars}
+   <ellipse cx="${W / 2}" cy="${H - 3}" rx="${W / 2 - 4}" ry="3.5" class="ops-base"/>
+  </svg>
+  <span class="ops-tower-name" dir="ltr">${esc(tower)}</span>
+  <span class="ops-tower-pct">${pct}<small>%</small></span>
+ </button>`;
+}
+
+// --- قوائم الترتيب ---
+function opsRank(rows, tone){
+ if(!rows.length) return '<p class="ops-empty">لا توجد بيانات كافية.</p>';
+ const peak = Math.max(...rows.map(r => r.value)) || 1;
+ return `<ol class="ops-rank ${tone}">${rows.map(r => `<li>
+  <span class="ops-rank-name">${r.ltr ? `<bdi dir="ltr">${esc(r.name)}</bdi>` : esc(r.name)}</span>
+  <span class="ops-rank-track"><i style="width:${Math.max(4, r.value / peak * 100).toFixed(1)}%"></i></span>
+  <b class="ops-rank-value num">${fmt(r.value)}</b>
+ </li>`).join('')}</ol>`;
+}
+
+// --- شريط الحركات الحي ---
+function opsTicker(){
+ const rows = (DATA.reservations||[])
+  .filter(r => r.created_at || r.source_date)
+  .sort((a, b) => new Date(b.created_at || b.source_date) - new Date(a.created_at || a.source_date))
+  .slice(0, OPS_MAX_TICKER);
+ if(!rows.length) return '<p class="ops-empty">لم تُسجَّل حركات بعد.</p>';
+ const kind = r => r.status === 'sold' ? ['بيع', 'sold'] : r.status === 'cancelled' ? ['إلغاء', 'cancelled'] : ['حجز', 'reserved'];
+ return `<ul class="ops-feed">${rows.map(r => {
+  const [label, cls] = kind(r);
+  return `<li class="ops-feed-row ${cls}">
+   <span class="ops-feed-kind">${esc(label)}</span>
+   <b dir="ltr" class="ops-feed-unit">${esc(r.unit_code)}</b>
+   <span class="ops-feed-who">${esc(r.salesperson_name || 'سجل مستورد')}</span>
+   <time class="ops-feed-time">${dateFmt(r.created_at || r.source_date)}</time>
+  </li>`;
+ }).join('')}</ul>`;
+}
+
+function renderOps(){
+ const us = opsUnits(), c = counts(us), total = us.length;
+ const bookable = us.filter(u => u.status === 'available' && !u.review_required).length;
+ const sellRate = opsPct(c.sold, total);
+ const res = DATA.reservations||[];
+ const active = res.filter(r => r.status === 'active').length;
+ const pending = (DATA.requests||[]).filter(r => r.status === 'pending').length;
+ const months = opsMonthly();
+ const thisMonth = months[months.length - 1] || {sold: 0, reserved: 0};
+ const prevMonth = months[months.length - 2] || {sold: 0, reserved: 0};
+ const delta = thisMonth.sold - prevMonth.sold;
+
+ const towerRank = allowedTowers().map(t => {
+  const tu = us.filter(u => u.tower === t);
+  return {name: t, value: counts(tu).sold, ltr: true};
+ }).sort((a, b) => b.value - a.value);
+
+ const staff = new Map();
+ res.filter(r => r.status !== 'cancelled' && r.salesperson_name).forEach(r => staff.set(r.salesperson_name, (staff.get(r.salesperson_name) || 0) + 1));
+ const staffRank = [...staff].map(([name, value]) => ({name, value})).sort((a, b) => b.value - a.value).slice(0, 6);
+
+ const metrics = [
+  ['إجمالي الوحدات', total, 'building', 'ضمن نطاق الحساب'],
+  ['متاح للحجز', bookable, 'circle', 'معتمد وجاهز', 'available'],
+  ['حجوزات فعّالة', active, 'clock', `${fmt(pending)} طلب إلغاء معلّق`, 'reserved'],
+  ['مباع', c.sold, 'check', delta === 0 ? 'كالشهر الماضي' : `${delta > 0 ? '▲' : '▼'} ${fmt(Math.abs(delta))} عن الشهر الماضي`, 'sold'],
+ ];
+
+ $('#managementView').innerHTML = `<div class="ops" id="opsRoot">
+  <div class="ops-grain" aria-hidden="true"></div>
+  <header class="ops-head">
+   <div class="ops-head-brand"><span class="ops-head-mark">${icon('building')}</span><div><b>المدينة الذهبية</b><small>غرفة العمليات · الزون الأول</small></div></div>
+   <div class="ops-head-end">
+    <span class="ops-live-dot" aria-hidden="true"></span><span class="ops-live-text">بيانات حيّة</span>
+    <time class="ops-clock" id="opsClock"></time>
+    <button class="ops-fs" data-action="ops-fullscreen" aria-label="ملء الشاشة">${icon('expand')}</button>
+   </div>
+  </header>
+
+  <section class="ops-metrics">${metrics.map(([label, value, ico, note, tone]) => `
+   <article class="ops-metric ${tone || ''}">
+    <div class="ops-metric-top"><span>${label}</span><span class="ops-metric-icon">${icon(ico)}</span></div>
+    <strong class="num">${fmt(value)}</strong>
+    <small>${note}</small>
+   </article>`).join('')}
+  </section>
+
+  <div class="ops-body">
+   <section class="ops-panel ops-bars">
+    <h3 class="ops-panel-title">حالة الطوابق</h3>
+    <div class="ops-towers" id="opsScene">${allowedTowers().map(opsTower).join('')}</div>
+    <div class="ops-legend">
+     <span class="available">متاح</span><span class="reserved">محجوز</span><span class="sold">مباع</span><span class="none">غير مسجّل</span>
+    </div>
+   </section>
+
+   <section class="ops-panel ops-hero">
+    <div class="ops-hero-head">
+     <h3 class="ops-panel-title">المجسّم ثلاثي الأبعاد</h3>
+     <div class="ops-hero-views">
+      <button data-action="ops-view" data-view="iso" class="is-on">مجسّم</button>
+      <button data-action="ops-view" data-view="front">أمام</button>
+      <button data-action="ops-view" data-view="right">جانب</button>
+      <button data-action="ops-view" data-view="top">أعلى</button>
+     </div>
+    </div>
+    <div class="ops-stage">
+     <canvas id="opsCanvas"></canvas>
+     <div class="ops-band" id="opsBand" hidden></div>
+     <div class="ops-stage-badge" id="opsStageBadge"></div>
+     <div class="ops-ruler" id="opsRuler" aria-label="اختيار الطابق"></div>
+     <div class="ops-floor-card" id="opsFloorCard" hidden></div>
+     <div class="ops-stage-note" id="opsStageNote">جارٍ تحضير المجسّم…</div>
+    </div>
+    <p class="ops-hero-hint">${icon('info')}اضغط طابقاً من المقياس لعرض شققه · ترتيب الشقق في البطاقة تخطيطي، فالنموذج لا يربط هندسته بأكواد الوحدات</p>
+   </section>
+
+   <section class="ops-panel ops-gauge-panel">
+    <h3 class="ops-panel-title">مؤشر الإنجاز</h3>
+    ${opsGauge(sellRate)}
+    <dl class="ops-gauge-legend">
+     <div><dt>مباع</dt><dd class="sold num">${fmt(c.sold)}</dd></div>
+     <div><dt>محجوز</dt><dd class="reserved num">${fmt(c.reserved)}</dd></div>
+     <div><dt>متاح</dt><dd class="available num">${fmt(c.available)}</dd></div>
+    </dl>
+   </section>
+
+   <section class="ops-panel ops-trend-panel">
+    <h3 class="ops-panel-title">المبيعات والحجوزات · آخر ١٢ شهراً</h3>
+    ${opsTrend(months)}
+    <div class="ops-legend"><span class="sold">مباع</span><span class="reserved">محجوز</span></div>
+   </section>
+
+   <section class="ops-panel ops-rank-panel ops-rank-staff">
+    <h3 class="ops-panel-title">الموظفون حسب عدد الحجوزات</h3>
+    ${opsRank(staffRank, 'gold')}
+   </section>
+
+   <section class="ops-panel ops-feed-panel">
+    <h3 class="ops-panel-title">آخر الحركات</h3>
+    ${opsTicker()}
+   </section>
+  </div>
+ </div>`;
+
+ startOpsClock();
+ mountOpsViewer(opsTowerKey || allowedTowers()[0] || 'A1');
+}
+
+// --- المجسّم: تُحمَّل وحدة العرض والنموذج عند فتح القسم فقط، لا مع تحميل النظام ---
+async function mountOpsViewer(tower){
+ const canvas = $('#opsCanvas');
+ if(!canvas) return;
+ opsTowerKey = tower;
+ const type = tower[0];
+ markOpsTower(tower);
+ const note = $('#opsStageNote'), badge = $('#opsStageBadge');
+ const meta = TYPES[type] || {};
+ if(badge) badge.innerHTML = `<b dir="ltr">${esc(tower)}</b><span>نمط ${esc(type)} · ${fmt(meta.floors || 0)} طابقاً · ${fmt((meta.geo && meta.geo.h) || 0)} م</span>`;
+ try{
+  if(!opsViewer){
+   const mod = await import('/ops3d.js');
+   if(!$('#opsCanvas')) return;
+   opsViewer = mod.createTowerViewer(canvas, {onError: e => opsStageMessage(String(e && e.message || e))});
+   if(!opsViewer.supported){opsStageMessage('هذا المتصفح لا يدعم WebGL 2، فلا يمكن عرض المجسّم.');return;}
+  }
+  if(note){note.hidden = false;note.textContent = 'جارٍ تحميل مجسّم نمط ' + type + '…';}
+  const model = await opsViewer.select(type);
+  if(!$('#opsCanvas')) return;
+  if(note) note.hidden = true;
+  if(model && badge) badge.insertAdjacentHTML('beforeend', `<small>${fmt(model.triangles)} مثلث</small>`);
+  const floors = (TYPES[type] || {}).floors || 0;
+  opsFloor = Math.min(opsFloor || Math.round(floors / 2) || 1, floors) || null;
+  opsViewer.onFrame(paintOpsFloor);
+  renderOpsRuler();
+  renderOpsFloorCard();
+  paintOpsFloor();
+ }catch(e){opsStageMessage(e.message || 'تعذّر تحميل المجسّم.');}
+}
+
+// --- طبقة الحجوزات فوق المجسّم ---------------------------------------------
+// مستوى كل طابق محسوب من الارتفاع الحقيقي للنموذج مقسوماً على عدد طوابقه، ثم
+// مُسقَط على الشاشة بمصفوفة الكاميرا نفسها — فالمواضع الرأسية حقيقية لا تقديرية.
+// أما ترتيب الشقق أفقياً فهو تخطيطي: النموذج لا يحمل ربطاً بين هندسته وأكواد
+// الوحدات، ولا يصحّ الإيحاء بأن العلامة تقف على نافذة بعينها.
+
+function opsFloorUnits(tower, floor){
+ return opsUnits().filter(u => u.tower === tower && u.floor === floor)
+  .sort((a, b) => (a.pos || 0) - (b.pos || 0));
+}
+function opsFloorStatus(us){
+ if(!us.length) return 'none';
+ const c = counts(us);
+ if(c.sold >= c.reserved && c.sold >= c.available) return 'sold';
+ return c.reserved >= c.available ? 'reserved' : 'available';
+}
+function opsReservationFor(code){
+ return (DATA.reservations||[]).find(r => r.unit_code === code && r.status !== 'cancelled');
+}
+
+// مقياس الطوابق: عمود مرقّم بجانب المجسّم، كل درجة فيه طابق بلون حالته
+function renderOpsRuler(){
+ const host = $('#opsRuler');
+ if(!host) return;
+ const floors = (TYPES[opsTowerKey[0]] || {}).floors || 0;
+ host.innerHTML = Array.from({length: floors}, (_, i) => {
+  const floor = floors - i;
+  const us = opsFloorUnits(opsTowerKey, floor);
+  const show = floor % 5 === 0 || floor === 1 || floor === floors;
+  return `<button class="ops-rung ${opsFloorStatus(us)}${floor === opsFloor ? ' is-on' : ''}"
+   data-action="ops-floor" data-floor="${floor}" aria-label="الطابق ${floor}"
+   ><span>${show ? floor : ''}</span></button>`;
+ }).join('');
+}
+
+// شريط ضوئي على المجسّم عند مستوى الطابق المختار. يُستدعى مع كل إطار مرسوم،
+// فلا يلمس إلا الأنماط — بناء HTML هنا يخنق السحب على نموذج بثلاثة ملايين مثلث.
+function paintOpsFloor(){
+ const band = $('#opsBand');
+ if(!band || !opsViewer) return;
+ const b = opsViewer.bounds();
+ const floors = (TYPES[opsTowerKey[0]] || {}).floors || 0;
+ if(!b || !floors || !opsFloor){band.hidden = true;return;}
+
+ const y = b.min[1] + (b.max[1] - b.min[1]) * ((opsFloor - .5) / floors);
+ const corners = [[b.min[0],y,b.min[2]],[b.min[0],y,b.max[2]],[b.max[0],y,b.min[2]],[b.max[0],y,b.max[2]]]
+  .map(p => opsViewer.project(p)).filter(Boolean);
+ if(corners.length < 4){band.hidden = true;return;}
+ const xs = corners.map(p => p.x), ys = corners.map(p => p.y);
+ const left = Math.min(...xs), right = Math.max(...xs), mid = (Math.min(...ys) + Math.max(...ys)) / 2;
+
+ band.hidden = false;
+ band.style.insetInlineStart = '';
+ band.style.left = (left - 10) + 'px';
+ band.style.width = (right - left + 20) + 'px';
+ band.style.top = mid + 'px';
+ band.dataset.label = 'الطابق ' + opsFloor;
+}
+
+// بطاقة شقق الطابق: تُبنى عند اختيار طابق، لا مع كل إطار
+function renderOpsFloorCard(){
+ const card = $('#opsFloorCard');
+ if(!card) return;
+ if(!opsFloor){card.hidden = true;return;}
+ const us = opsFloorUnits(opsTowerKey, opsFloor);
+ card.hidden = false;
+ card.innerHTML = `<div class="ops-floor-head"><b>الطابق ${fmt(opsFloor)}</b><span>${fmt(us.length)} وحدة</span></div>`
+  + (us.length ? `<ul class="ops-floor-list">${us.map(u => {
+     const r = opsReservationFor(u.code);
+     return `<li class="${esc(u.status)}">
+      <b dir="ltr">${esc(u.code)}</b>
+      <span class="ops-floor-area">${fmt(u.area)} م²</span>
+      <span class="ops-floor-state">${esc((STATUSES[u.status] || STATUSES.unknown).ar)}</span>
+      <span class="ops-floor-who">${esc(r ? (r.client_name || 'عميل غير مسمّى') : u.review_required ? 'بحاجة مراجعة' : '—')}</span>
+     </li>`;
+    }).join('')}</ul>` : '<p class="ops-empty">لا توجد وحدات مسجّلة على هذا الطابق.</p>');
+}
+
+function setOpsFloor(floor){
+ opsFloor = floor;
+ renderOpsRuler();
+ renderOpsFloorCard();
+ paintOpsFloor();
+}
+
+function opsStageMessage(text){const note = $('#opsStageNote');if(note){note.hidden = false;note.textContent = text;}}
+function markOpsTower(tower){document.querySelectorAll('.ops-tower').forEach(b => b.classList.toggle('is-on', b.dataset.tower === tower));}
+
+function startOpsClock(){
+ stopOpsClock();
+ const tick = () => {
+  const el = $('#opsClock');
+  if(!el) return stopOpsClock();
+  el.textContent = new Intl.DateTimeFormat('ar-IQ', {timeZone: 'Asia/Baghdad', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false}).format(new Date());
+ };
+ tick();
+ opsClock = setInterval(tick, 1000);
+}
+function stopOpsClock(){if(opsClock){clearInterval(opsClock);opsClock = null;}}
+function destroyOpsViewer(){if(opsViewer){opsViewer.destroy();opsViewer = null;}}
+
+
 function rowActions(r){const pending=DATA.requests.some(x=>String(x.reservation_id)===String(r.id)&&x.status==='pending');return `<div class="row-actions"><button class="text-btn" data-unit="${esc(r.unit_code)}">تفاصيل</button>${r.status==='active'?`<button class="btn small" data-action="cancel-request" data-id="${r.id}" ${pending?'disabled':''}>${pending?'طلب معلّق':'طلب إلغاء'}</button>${isManager()?`<button class="btn small" data-action="sell" data-id="${r.id}">اعتماد البيع</button>`:''}`:''}</div>`;}
 function renderBookings(){const rows=DATA.reservations||[];$('#managementView').innerHTML=`<div class="management-card"><div class="management-heading"><h2>${rows.length} حجزاً ضمن الصلاحيات</h2><span>الحجز الملغى يبقى في السجل</span></div>${rows.length?`<div class="table-scroll"><table class="data-table"><thead><tr><th>الوحدة / رقم الحجز</th><th>العميل</th><th>الموظف</th><th>التاريخ</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b dir="ltr">${esc(r.unit_code)}</b><small>#${esc(r.id)}${r.legacy?' · مستورد':''}</small></td><td>${esc(r.client_name||'غير محدد')}<small dir="ltr">${esc(r.client_phone||'')}</small></td><td>${esc(r.salesperson_name||'غير مرتبط بحساب')}</td><td>${dateFmt(r.created_at||r.date)}</td><td>${r.status==='cancelled'?requestPill('cancelled'):pill(r.status==='sold'?'sold':'reserved')}</td><td>${rowActions(r)}</td></tr>`).join('')}</tbody></table></div>`:empty('لا توجد حجوزات','اختر وحدة متاحة ومعتمدة من سجل الوحدات لإنشاء حجز.')}</div>`;}
 function renderRequests(){const own=state.section==='requests',rows=(DATA.requests||[]).filter(r=>!own||String(r.requested_by)===String(session.user.id)).sort((a,b)=>(a.status==='pending'?-1:1)-(b.status==='pending'?-1:1));$('#managementView').innerHTML=`<div class="management-card"><div class="management-heading"><h2>${rows.filter(r=>r.status==='pending').length} طلبات بانتظار الموافقة</h2><span>الوحدة تبقى محجوزة حتى الاعتماد</span></div>${rows.length?`<div class="approval-cards">${rows.map(r=>`<article class="approval-card"><div class="approval-top"><div><b dir="ltr">${esc(r.unit_code)}</b><span>الحجز #${esc(r.reservation_id)}</span></div>${requestPill(r.status)}</div><p class="approval-reason">${esc(r.reason)}</p><dl class="approval-meta"><div><dt>صاحب الطلب</dt><dd>${esc(r.requester_name||r.requested_by)}</dd></div><div><dt>وقت الطلب</dt><dd>${dateFmt(r.created_at)}</dd></div></dl>${r.decision_reason?`<p class="decision-note">قرار المدير: ${esc(r.decision_reason)}</p>`:''}<div class="approval-actions"><button class="text-btn" data-action="request-detail" data-id="${r.id}">عرض بيانات الحجز</button>${isManager()&&r.status==='pending'?`<button class="btn" data-action="decision" data-decision="reject" data-id="${r.id}">رفض</button><button class="btn solid" data-action="decision" data-decision="approve" data-id="${r.id}">موافقة على الإلغاء</button>`:''}</div></article>`).join('')}</div>`:empty('لا توجد طلبات','ستظهر طلبات الإلغاء ونتيجة مراجعتها هنا.')}</div>`;}
@@ -245,12 +633,16 @@ async function action(name,el){
  if(name==='request-detail'){const r=DATA.requests.find(r=>String(r.id)===String(el.dataset.id)),b=DATA.reservations.find(b=>String(b.id)===String(r?.reservation_id));return openDialog('الحجز المرتبط بالطلب',b?`<dl class="detail-extra"><dt>الوحدة</dt><dd>${bdi(b.unit_code)}</dd><dt>العميل</dt><dd>${esc(b.client_name)}</dd><dt>الهاتف</dt><dd>${bdi(b.client_phone||'غير محدد')}</dd><dt>الموظف</dt><dd>${esc(b.salesperson_name||'سجل مستورد')}</dd><dt>الحالة</dt><dd>${esc(b.status==='active'?'حجز فعال':b.status==='sold'?'مباع':'ملغى')}</dd></dl>`:'<p>لا توجد بيانات إضافية متاحة لهذا الحساب.</p>');}
  if(name==='export')return dataGate('export');
  if(name==='print')return window.print();
+ if(name==='ops-floor')return setOpsFloor(Number(el.dataset.floor));
+ if(name==='ops-view'){if(!opsViewer)return;opsViewer.view(el.dataset.view);document.querySelectorAll('[data-action="ops-view"]').forEach(b=>b.classList.toggle('is-on',b===el));return;}
+ if(name==='ops-fullscreen'){const root=document.documentElement;if(document.fullscreenElement)return document.exitFullscreen();try{await root.requestFullscreen();}catch{toast('المتصفح منع وضع ملء الشاشة.');}return;}
 }
 document.addEventListener('click',async e=>{
  const btn=e.target.closest('[data-action]');if(btn){e.preventDefault();try{await action(btn.dataset.action,btn);}catch(err){toast(err.message);}return;}
  const unit=e.target.closest('[data-unit]');if(unit&&!unit.disabled){if(state.section!=='units'){route('units');state.mode='list';}return selectUnit(unit.dataset.unit);}
  const nav=e.target.closest('[data-section]');if(nav)return route(nav.dataset.section);
- const tower=e.target.closest('[data-tower]');if(tower){state.tower=tower.dataset.tower;state.page=1;state.selected=null;detail=null;state.mode=mobile.matches?'list':'visual';return renderUnits();}
+ const tower=e.target.closest('[data-tower]');if(tower&&state.section==='ops'){mountOpsViewer(tower.dataset.tower);return;}
+ if(tower){state.tower=tower.dataset.tower;state.page=1;state.selected=null;detail=null;state.mode=mobile.matches?'list':'visual';return renderUnits();}
  const st=e.target.closest('[data-status]');if(st){state.status=state.status===st.dataset.status?'all':st.dataset.status;state.page=1;state.selected=null;return renderUnits();}
  const mode=e.target.closest('[data-mode]');if(mode){state.mode=mode.dataset.mode;state.page=1;return renderUnits();}
  const page=e.target.closest('[data-page]');if(page&&!page.disabled){state.page+=page.dataset.page==='next'?1:-1;renderUnits();$('.list-wrap')?.scrollTo({top:0});}

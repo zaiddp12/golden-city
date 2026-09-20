@@ -753,14 +753,16 @@ class Handler(BaseHTTPRequestHandler):
     def serve_static(self, path):
         if path == "/":
             path = "/index.html"
-        allowed = {"/index.html", "/app.js", "/style.css", "/ai.js", "/favicon.svg"}
+        allowed = {"/index.html", "/app.js", "/style.css", "/ai.js", "/ops3d.js", "/favicon.svg"}
         is_vendor = path.startswith("/vendor/") and all(part not in ("", ".", "..") for part in path[1:].split("/")) and Path(path).suffix in (".js", ".mjs", ".wasm", ".woff2", ".woff", ".json")
-        if path not in allowed and not is_vendor:
+        # مجسّمات الأبراج لغرفة العمليات: ملفات ثابتة للقراءة فقط، بنفس قيود المسار
+        is_model = path.startswith("/models/") and all(part not in ("", ".", "..") for part in path[1:].split("/")) and Path(path).suffix in (".glb", ".png")
+        if path not in allowed and not is_vendor and not is_model:
             fail(404, "الملف غير موجود.")
         target = (ROOT / "static" / path.lstrip("/")).resolve()
         if not target.is_relative_to((ROOT / "static").resolve()) or not target.is_file():
             fail(404, "الملف غير موجود.")
-        mime = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".woff": "font/woff", ".wasm": "application/wasm", ".json": "application/json"}.get(target.suffix, "application/octet-stream")
+        mime = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".woff": "font/woff", ".wasm": "application/wasm", ".json": "application/json", ".glb": "model/gltf-binary", ".png": "image/png"}.get(target.suffix, "application/octet-stream")
         self.respond(data=target.read_bytes(), content_type=mime)
 
     def auth(self, path, payload, session):
