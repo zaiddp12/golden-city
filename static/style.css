@@ -70,3 +70,84 @@
 
 .notification-button{position:relative;flex-shrink:0}.notification-count{position:absolute;top:-5px;inset-inline-start:-6px;background:var(--wine);border:2px solid white;color:white;border-radius:10px;min-width:19px;padding:0 3px;font-size:9px;line-height:15px}.notification-list{display:flex;flex-direction:column;gap:10px}.notification-list article{border:1px solid var(--line);border-radius:10px;padding:14px}.notification-list article>div{display:flex;gap:9px;align-items:start;font-size:13px}.notification-list small{display:block;color:var(--muted);font-size:11px;margin:5px 27px}.notification-list .text-btn{margin-inline-start:27px;font-size:12px}
 @media(max-width:380px){.top-end{gap:6px}.brand strong{font-size:14px}.brand-mark{width:27px}.brand{gap:6px}.top-inner{padding-inline:12px}}
+
+/* =============================================================================
+   طبقة الألوان — "لهجة لونية على الأيقونات" (Icon Accent Layer)
+   -----------------------------------------------------------------------------
+   المرجعية التصميمية المعتمدة:
+   1. الأساس يبقى كما هو: خلفية قريبة من الأبيض (--paper) وبطاقات بيضاء. لا يتغير
+      أي لون خلفية أو نص أساسي، ولا تُمسّ هوية المدينة الذهبية (النبيذي + الذهبي)
+      التي تبقى مخصّصة للعلامة والأزرار الأساسية والأسعار فقط.
+   2. اللون يدخل عبر الأيقونات حصراً: كل أيقونة تأخذ لوناً دلالياً واحداً، موضوعاً
+      داخل مربّع بخلفية من نفس العائلة اللونية بإضاءة 95–97% — أي درجة فاتحة جداً
+      تكاد تذوب في الأبيض، فتُقرأ كلمسة لا ككتلة لونية.
+   3. اللون وظيفي لا زخرفي: نفس المعنى يأخذ نفس اللون في كل النظام (متاح = أخضر
+      مزرق، محجوز = عنبري، مباع = وردي، معلومات/هيكل = أزرق، صلاحيات = بنفسجي،
+      محايد = رمادي مزرق).
+   4. تباين مضمون: كل لون أيقونة أغمق من خلفيته بنسبة تتجاوز 4.5:1، ليبقى الرمز
+      واضحاً على الشاشات الباهتة وفي الطباعة.
+   5. الانضباط: ستة ألوان فقط، لا تدرّجات ولا ظلال ملوّنة، وسماكة الخط والحواف
+      تبقى كما هي — التحديث لوني بحت.
+   ============================================================================= */
+
+:root{
+ --acc-blue:#2563C9;   --acc-blue-soft:#EEF3FD;
+ --acc-teal:#0F7B62;   --acc-teal-soft:#E9F5F1;
+ --acc-amber:#A9761A;  --acc-amber-soft:#FBF3E2;
+ --acc-rose:#B84C67;   --acc-rose-soft:#FBEDF1;
+ --acc-violet:#6247B5; --acc-violet-soft:#F1EEFA;
+ --acc-slate:#5B6676;  --acc-slate-soft:#EFF2F6;
+}
+
+/* --- بطاقات الإحصاءات: أيقونة ملوّنة + شريط علوي رفيع بنفس اللون --- */
+.kpis .kpi{--kpi-accent:var(--acc-slate);--kpi-accent-soft:var(--acc-slate-soft)}
+.kpis .kpi:nth-child(1){--kpi-accent:var(--acc-blue);--kpi-accent-soft:var(--acc-blue-soft)}
+.kpis .kpi:nth-child(2){--kpi-accent:var(--acc-teal);--kpi-accent-soft:var(--acc-teal-soft)}
+.kpis .kpi:nth-child(3){--kpi-accent:var(--acc-rose);--kpi-accent-soft:var(--acc-rose-soft)}
+.kpis .kpi:nth-child(4){--kpi-accent:var(--acc-amber);--kpi-accent-soft:var(--acc-amber-soft)}
+.kpis .kpi .kpi-icon{background:var(--kpi-accent-soft);color:var(--kpi-accent)}
+.kpis .kpi:before{content:"";position:absolute;top:0;inset-inline:0;height:2px;background:var(--kpi-accent);opacity:.5}
+
+/* --- شريط الأقسام: لون دلالي لكل قسم --- */
+.workflow-tab .icon{color:var(--acc-slate)}
+.workflow-tab[data-section="units"] .icon{color:var(--acc-blue)}
+.workflow-tab[data-section="bookings"] .icon{color:var(--acc-teal)}
+.workflow-tab[data-section="requests"] .icon{color:var(--acc-amber)}
+.workflow-tab[data-section="approvals"] .icon{color:var(--acc-teal)}
+.workflow-tab[data-section="review"] .icon{color:var(--acc-rose)}
+.workflow-tab[data-section="users"] .icon{color:var(--acc-violet)}
+.workflow-tab[data-section="audit"] .icon{color:var(--acc-violet)}
+.workflow-tab[data-section="history"] .icon{color:var(--acc-slate)}
+.workflow-tab.is-active .icon{color:var(--wine)}
+
+/* --- أزرار شريط الأدوات: الأيقونة ملوّنة والنص يبقى داكناً --- */
+.btn:not(.solid)[data-action="refresh"] .icon{color:var(--acc-violet)}
+.btn:not(.solid)[data-action="print"] .icon{color:var(--acc-slate)}
+.btn:not(.solid)[data-action="export"] .icon{color:var(--acc-teal)}
+.btn:not(.solid)[data-action="upload"] .icon{color:var(--acc-blue)}
+.btn:not(.solid)[data-action="new-user"] .icon{color:var(--acc-violet)}
+.btn:not(.solid)[data-action="review-report"] .icon{color:var(--acc-rose)}
+.export-options .btn .icon{color:var(--acc-teal)}
+.export-options .btn:nth-child(3) .icon{color:var(--acc-violet)}
+.export-options .btn:nth-child(4) .icon{color:var(--acc-amber)}
+
+/* --- أزرار الأيقونات في الشريط العلوي --- */
+#notificationButton .icon{color:var(--acc-amber)}
+#logoutButton .icon{color:var(--acc-slate)}
+.icon-btn:hover .icon{color:inherit}
+
+/* --- تنبيه المراجعة: أيقونة معلومات زرقاء بدل الرمادي --- */
+.import-alert .icon{color:var(--acc-blue)}
+
+/* --- بوابة رمز الحماية للاستيراد والتصدير --- */
+.gate{text-align:center}
+.gate-emblem{width:46px;height:46px;margin:0 auto 14px;border-radius:13px;background:var(--acc-blue-soft);color:var(--acc-blue);display:grid;place-items:center}
+.gate-emblem .icon{width:22px;height:22px}
+.gate-intro{font-size:13px;color:var(--muted);line-height:1.9;margin-bottom:18px}
+.gate-form{text-align:start}
+.gate-form label{display:flex;flex-direction:column;gap:7px;font-size:12px;color:var(--muted)}
+.gate-form input{min-height:46px;border:1px solid #DCE1E8;border-radius:9px;background:white;padding:9px 14px;font-size:20px;letter-spacing:7px;text-align:center}
+.gate-form input:focus{border-color:var(--acc-blue);box-shadow:0 0 0 3px var(--acc-blue-soft)}
+.gate-form input.is-wrong{border-color:#C0392B;animation:gate-shake .3s}
+.gate-form .form-error{margin-top:10px;font-size:12px}
+@keyframes gate-shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
