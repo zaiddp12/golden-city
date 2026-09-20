@@ -517,20 +517,21 @@ function renderOpsFloorCard(){
  if(!opsFloor){card.hidden = true;return;}
  const us = opsFloorUnits(opsTowerKey, opsFloor);
  card.hidden = false;
- card.innerHTML = `<div class="ops-floor-head"><b>الطابق ${fmt(opsFloor)}</b><span>${fmt(us.length)} وحدة</span></div>`
+ card.innerHTML = `<div class="ops-floor-head"><b>الطابق ${fmt(opsFloor)}</b><span>${fmt(us.length)} وحدة</span>`
+  + `<button class="ops-floor-close" data-action="ops-floor" data-floor="0" aria-label="إغلاق">${icon('x')}</button></div>`
   + (us.length ? `<ul class="ops-floor-list">${us.map(u => {
      const r = opsReservationFor(u.code);
      return `<li class="${esc(u.status)}">
       <b dir="ltr">${esc(u.code)}</b>
-      <span class="ops-floor-area">${fmt(u.area)} م²</span>
       <span class="ops-floor-state">${esc((STATUSES[u.status] || STATUSES.unknown).ar)}</span>
+      <span class="ops-floor-area">${fmt(Math.round(u.area))} م²</span>
       <span class="ops-floor-who">${esc(r ? (r.client_name || 'عميل غير مسمّى') : u.review_required ? 'بحاجة مراجعة' : '—')}</span>
      </li>`;
     }).join('')}</ul>` : '<p class="ops-empty">لا توجد وحدات مسجّلة على هذا الطابق.</p>');
 }
 
 function setOpsFloor(floor){
- opsFloor = floor;
+ opsFloor = (!floor || floor === opsFloor) ? null : floor;   // الضغط على الطابق نفسه يطوي البطاقة
  renderOpsRuler();
  renderOpsFloorCard();
  paintOpsFloor();

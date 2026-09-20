@@ -386,7 +386,7 @@ body.ops-live #managementView{margin-bottom:16px}
 .ops-feed-time{color:#7E92B2;font-size:10px;white-space:nowrap}
 
 /* --- الشاشات الصغيرة: تُصبح عمودية، لأن هذه الشبكة مصمّمة لشاشة عريضة --- */
-@media(max-width:1180px){
+@media(max-width:1400px){
  .ops-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto;grid-template-areas:none}
  .ops-stage{min-height:340px}
  .ops-panel{grid-area:auto!important}
@@ -400,8 +400,8 @@ body.ops-live #managementView{margin-bottom:16px}
 @media(prefers-reduced-motion:reduce){.ops-live-dot{animation:none}}
 
 /* --- طبقة الحجوزات فوق المجسّم --- */
-.ops-ruler{position:absolute;top:14px;bottom:14px;inset-inline-end:14px;z-index:4;
- display:flex;flex-direction:column;gap:1px;width:52px}
+.ops-ruler{position:absolute;top:14px;bottom:14px;inset-inline-end:12px;z-index:4;
+ display:flex;flex-direction:column;gap:1px;width:44px}
 .ops-rung{flex:1;min-height:0;display:flex;align-items:center;justify-content:flex-end;gap:6px;
  background:none;border:0;padding:0 4px 0 0;position:relative}
 .ops-rung:before{content:"";flex:none;width:14px;height:3px;border-radius:2px;background:#2A3A58;order:2}
@@ -420,22 +420,31 @@ body.ops-live #managementView{margin-bottom:16px}
  transform:translateY(-100%);font:700 11px/1 Tajawal,Arial,sans-serif;color:#E7C46B;white-space:nowrap;
  background:#070E1FD9;border:1px solid #E7C46B45;border-radius:6px;padding:4px 8px}
 
-.ops-floor-card{position:absolute;bottom:12px;inset-inline-start:12px;z-index:5;width:min(330px,62%);
- background:#070E1FEB;border:1px solid #FFFFFF16;border-radius:11px;padding:11px 13px;
+.ops-floor-card{position:absolute;bottom:12px;inset-inline-start:12px;z-index:5;
+ width:min(280px,calc(100% - 68px));max-height:calc(100% - 24px);
+ display:flex;flex-direction:column;min-height:0;
+ background:#070E1FEB;border:1px solid #FFFFFF16;border-radius:11px;padding:10px 11px;
  backdrop-filter:blur(8px)}
-.ops-floor-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
- padding-bottom:8px;margin-bottom:7px;border-bottom:1px solid #FFFFFF12}
+.ops-floor-head{display:flex;align-items:center;gap:8px;flex:none;
+ padding-bottom:7px;margin-bottom:6px;border-bottom:1px solid #FFFFFF12}
+.ops-floor-head span{margin-inline-start:auto}
+.ops-floor-close{flex:none;width:22px;height:22px;display:grid;place-items:center;
+ background:none;border:0;color:#7E92B2;border-radius:6px}
+.ops-floor-close:hover{color:#FF6B8A;background:#FFFFFF0F}
+.ops-floor-close .icon{width:13px;height:13px}
 .ops-floor-head b{font:700 15px/1 Tajawal,Arial,sans-serif;color:#E7C46B}
 .ops-floor-head span{font-size:11px;color:#8FA3C4}
 .ops-floor-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;
- max-height:148px;overflow:auto;scrollbar-width:thin}
-.ops-floor-list li{--tone:#7E92B2;display:grid;grid-template-columns:minmax(82px,auto) 58px 50px minmax(0,1fr);
- align-items:center;gap:8px;font-size:11px;padding:5px 8px;border-radius:7px;background:#FFFFFF07;
+ flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
+.ops-floor-list li{--tone:#7E92B2;display:grid;grid-template-columns:auto minmax(0,1fr);
+ gap:1px 8px;font-size:11px;padding:5px 8px;border-radius:7px;background:#FFFFFF07;
  border-inline-start:2px solid var(--tone)}
 .ops-floor-list li.available{--tone:#35D39A}
 .ops-floor-list li.reserved{--tone:#F2B441}
 .ops-floor-list li.sold{--tone:#FF6B8A}
-.ops-floor-list b{color:#F4F8FE;font-weight:700}
-.ops-floor-area{color:#8FA3C4}
-.ops-floor-state{color:var(--tone);font-weight:700}
-.ops-floor-who{color:#9DB0CE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ops-floor-list b{grid-area:1/1;color:#F4F8FE;font-weight:700;font-size:11px;white-space:nowrap}
+.ops-floor-state{grid-area:1/2;color:var(--tone);font-weight:700;font-size:10px;white-space:nowrap;
+ text-align:end;overflow:hidden;text-overflow:ellipsis}
+.ops-floor-area{grid-area:2/1;color:#8FA3C4;font-size:10px;white-space:nowrap}
+.ops-floor-who{grid-area:2/2;color:#9DB0CE;font-size:10px;text-align:end;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
