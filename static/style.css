@@ -212,7 +212,7 @@ body.ops-live #managementView{margin-bottom:16px}
 .ops{position:relative;border-radius:18px;overflow:hidden;padding:20px 22px 22px;
  background:radial-gradient(120% 85% at 50% -10%,#17325C 0%,#0C1730 52%,#070E1F 100%);
  border:1px solid #1D2E4D;display:flex;flex-direction:column;gap:14px;
- height:calc(100dvh - 168px);min-height:560px;overflow:hidden}
+ height:var(--ops-height,calc(100dvh - 168px));min-height:520px;overflow:hidden}
 .ops-grain{position:absolute;inset:0;pointer-events:none;
  background:linear-gradient(#ffffff05 1px,transparent 1px) 0 0/100% 3px}
 
@@ -251,9 +251,17 @@ body.ops-live #managementView{margin-bottom:16px}
 
 /* --- شبكة الألواح --- */
 .ops-body{flex:1;display:grid;gap:12px;min-height:0;
- grid-template-columns:minmax(0,.62fr) minmax(0,1.6fr) minmax(0,1fr) minmax(0,.86fr);
- grid-template-rows:minmax(0,1.55fr) minmax(0,1fr) minmax(0,.85fr);
- grid-template-areas:"bars hero gauge feed" "bars hero trend feed" "bars hero rankB feed"}
+ grid-template-columns:minmax(0,.58fr) minmax(0,1.55fr) minmax(0,1fr) minmax(0,.85fr);
+ grid-template-rows:minmax(0,1.25fr) minmax(0,1fr);
+ grid-template-areas:"bars hero gauge feed" "bars hero trend feed"}
+.ops-body .ops-rank-staff{display:none}   /* يسبق .ops-panel في الملف، فيحتاج نوعية أعلى */
+
+/* ترتيب الموظفين لوحٌ إضافي: يظهر حين يوجد ارتفاع يكفيه، لا على حساب غيره */
+@media(min-height:940px){
+ .ops-body{grid-template-rows:minmax(0,1.35fr) minmax(0,1fr) minmax(0,.8fr);
+  grid-template-areas:"bars hero gauge feed" "bars hero trend feed" "bars hero rankB feed"}
+ .ops-body .ops-rank-staff{display:flex}
+}
 .ops-panel{padding:14px 16px;border-radius:13px;background:#FFFFFF08;border:1px solid #FFFFFF14;
  display:flex;flex-direction:column;min-height:0;min-width:0}
 .ops-panel-title{font-size:13px;font-weight:700;color:#BCCBE4;margin-bottom:11px;
@@ -317,8 +325,9 @@ body.ops-live #managementView{margin-bottom:16px}
 .ops-tower.is-on .ops-tower-name{color:#E7C46B}
 .ops-tower.is-on .ops-tower-pct{color:#E7C46B}
 .ops-towers{gap:3px}
-.ops-tower-name{font-size:11px;letter-spacing:.5px}
-.ops-tower-pct{font-size:15px}
+.ops-tower-name{font-size:clamp(9px,.85vw,12px);letter-spacing:.4px}
+.ops-tower-pct{font-size:clamp(11px,1.05vw,16px)}
+.ops-towers{gap:clamp(2px,.4vw,6px)}
 
 /* --- وسيلة الإيضاح --- */
 .ops-legend{display:flex;gap:9px 12px;flex-wrap:wrap;font-size:11px;color:#8FA3C4;padding-top:9px;
@@ -386,16 +395,35 @@ body.ops-live #managementView{margin-bottom:16px}
 .ops-feed-time{color:#7E92B2;font-size:10px;white-space:nowrap}
 
 /* --- الشاشات الصغيرة: تُصبح عمودية، لأن هذه الشبكة مصمّمة لشاشة عريضة --- */
-@media(max-width:1400px){
- .ops-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto;grid-template-areas:none}
- .ops-stage{min-height:340px}
- .ops-panel{grid-area:auto!important}
- .ops{height:auto;overflow:visible}
- .ops-metric strong{font-size:32px}
+/* القياس يتبع المساحة، لا رقماً ثابتاً.
+   كانت الأحجام مثبّتة بالبكسل ثم يُقفز عند عرض مُخمَّن إلى تخطيط يتخلّى عن قاعدة
+   "شاشة واحدة" — فتكبر الألواح بحجم محتواها وتُمرَّر الصفحة. القاعدة أهم من
+   الاستثناء: الإطار يبقى شاشة واحدة، والخطوط تتقلّص معه بـ clamp، ولا نغيّر
+   التخطيط إلا حين يضيق عمودٌ عن حدّ نفعه فعلاً. */
+.ops-metric strong{font-size:clamp(24px,2.5vw,42px)}
+.ops-metric-top{font-size:clamp(11px,.95vw,13px)}
+.ops-metric small{font-size:clamp(10px,.72vw,11px)}
+.ops-panel-title{font-size:clamp(11px,.85vw,13px)}
+.ops-clock{font-size:clamp(17px,1.5vw,24px);min-width:auto}
+.ops-head-brand b{font-size:clamp(14px,1.1vw,17px)}
+
+/* دون هذا العرض يصبح اللوح الأوسط أضيق من أن يحمل رسماً مقروءاً،
+   فيسقط ترتيب الموظفين — وهو أقل ما يُتابَع على شاشة جدار — وتبقى البقية كاملة. */
+@media(max-width:1050px){
+ .ops-body{grid-template-columns:minmax(0,.55fr) minmax(0,1.6fr) minmax(0,1fr);
+  grid-template-areas:"bars hero gauge" "bars hero trend"}
+ .ops-body .ops-feed-panel,.ops-body .ops-rank-staff{display:none}
 }
+
+/* الهاتف واللوحي: هنا وحدها يُسمح بالتمرير، لأن الشاشة الواحدة تصير غير مقروءة */
 @media(max-width:820px){
+ .ops{height:auto;overflow:visible}
  .ops-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
- .ops-body{grid-template-columns:minmax(0,1fr)}
+ .ops-body{grid-template-columns:minmax(0,1fr);grid-template-rows:auto;grid-template-areas:none}
+ .ops-panel{grid-area:auto!important}
+ .ops-body .ops-rank-staff,.ops-body .ops-feed-panel{display:flex}
+ .ops-stage{min-height:320px}
+ .ops-towers{min-height:220px}
 }
 @media(prefers-reduced-motion:reduce){.ops-live-dot{animation:none}}
 

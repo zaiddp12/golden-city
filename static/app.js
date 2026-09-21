@@ -417,8 +417,19 @@ function renderOps(){
  </div>`;
 
  startOpsClock();
+ fitOpsHeight();
  mountOpsViewer(opsTowerKey || allowedTowers()[0] || 'A1');
 }
+
+// الإطار ينتهي عند أسفل النافذة تماماً: يُقاس ما فوقه فعلياً بدل طرح رقم ثابت،
+// فيستوي على أي شاشة ومع أي تكبير للمتصفح دون تخمين.
+function fitOpsHeight(){
+ const root = $('#opsRoot');
+ if(!root) return;
+ const top = root.getBoundingClientRect().top + window.scrollY;
+ root.style.setProperty('--ops-height', Math.max(520, window.innerHeight - top - 16) + 'px');
+}
+addEventListener('resize', () => {if($('#opsRoot'))fitOpsHeight();});
 
 // --- المجسّم: تُحمَّل وحدة العرض والنموذج عند فتح القسم فقط، لا مع تحميل النظام ---
 async function mountOpsViewer(tower){
