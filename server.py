@@ -753,7 +753,7 @@ class Handler(BaseHTTPRequestHandler):
     def serve_static(self, path):
         if path == "/":
             path = "/index.html"
-        allowed = {"/index.html", "/app.js", "/style.css", "/ai.js", "/ops3d.js", "/favicon.svg"}
+        allowed = {"/index.html", "/app.js", "/style.css", "/ai.js", "/ops3d.js", "/theme.js", "/favicon.svg"}
         is_vendor = path.startswith("/vendor/") and all(part not in ("", ".", "..") for part in path[1:].split("/")) and Path(path).suffix in (".js", ".mjs", ".wasm", ".woff2", ".woff", ".json")
         # مجسّمات الأبراج لغرفة العمليات: ملفات ثابتة للقراءة فقط، بنفس قيود المسار
         is_model = path.startswith("/models/") and all(part not in ("", ".", "..") for part in path[1:].split("/")) and Path(path).suffix in (".glb", ".png")

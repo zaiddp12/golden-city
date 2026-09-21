@@ -14,7 +14,9 @@ const ICONS={bell:'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4',spar
  info:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M12 11v6M12 7h.01',
  copy:'M8 8h12v13H8zM16 8V3H4v13h4',car:'m5 8 2-5h10l2 5M3 9h18v9H3zM5 18v3m14-3v3M6 13h2m8 0h2',
  eye:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
- chart:'M4 21V3M4 21h17M8 17v-5m5 5V7m5 10V4',expand:'M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5',lock:'M6 10h12v11H6zM8 10V6a4 4 0 0 1 8 0v4'
+ chart:'M4 21V3M4 21h17M8 17v-5m5 5V7m5 10V4',expand:'M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5',lock:'M6 10h12v11H6zM8 10V6a4 4 0 0 1 8 0v4',
+ moon:'M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10',
+ sun:'M17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4'
 };
 const $=s=>document.querySelector(s);
 const icon=n=>`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[n]||ICONS.info}"/></svg>`;
@@ -126,10 +128,10 @@ function stackBar(list){const c=counts(list),n=list.length||1;return `<div class
 function towerSVG(code){
  const T=TYPES[code[0]],G=T.geo,w=G.w,h=G.h,top=114-h,shaft=h-G.crown,n=T.positions.length,pad=1.8,gap=.7,spine=1.6,cw=(w-pad*2-gap*(n-2)-spine)/n,pitch=shaft/T.floors;
  const us=DATA.units.filter(u=>u.tower===code),map=new Map(us.map(u=>[u.floor+'-'+u.pos,u]));
- let svg=`<svg class="tower-svg" viewBox="-5 0 ${w+10} 116" aria-label="مخطط برج ${code}"><g transform="translate(0 ${top})"><rect x="0" y="${G.crown}" width="${w}" height="${shaft}" rx=".5" fill="#E9E9E0" stroke="#C5C8BB" stroke-width=".5"/><path d="M-1 ${G.crown}V${G.crown*.65}H${w*.18}V${G.crown*.3}H${w*.39}V0h${w*.22}v${G.crown*.3}H${w*.82}v${G.crown*.35}H${w+1}V${G.crown}Z" fill="#EBEADF" stroke="#BABCAD" stroke-width=".45"/>`;
+ let svg=`<svg class="tower-svg" viewBox="-5 0 ${w+10} 116" aria-label="مخطط برج ${code}"><g transform="translate(0 ${top})"><rect x="0" y="${G.crown}" width="${w}" height="${shaft}" rx=".5" fill="var(--tw-shaft)" stroke="var(--tw-shaft-edge)" stroke-width=".5"/><path d="M-1 ${G.crown}V${G.crown*.65}H${w*.18}V${G.crown*.3}H${w*.39}V0h${w*.22}v${G.crown*.3}H${w*.82}v${G.crown*.35}H${w+1}V${G.crown}Z" fill="var(--tw-crown)" stroke="var(--tw-crown-edge)" stroke-width=".45"/>`;
  const rect=(u,x,y,width,ch)=>`<rect x="${x}" y="${y}" width="${width}" height="${ch}" rx=".25" fill="${STATUSES[u.status]?.color||STATUSES.unknown.color}" class="svg-unit${matches(u)?'':' is-dim'}" data-unit="${esc(u.code)}"><title>${esc(u.code)} · ${STATUSES[u.status]?.ar||'غير محسوم'}${u.review_required?' · بحاجة للمراجعة':''}</title></rect>`;
- for(let f=T.floors;f>=1;f--){const y=G.crown+(T.floors-f)*pitch+.4,ch=Math.max(1,pitch-.8);if(f===T.floors){for(let p=1;p<=2;p++){const u=map.get(f+'-'+p);if(u)svg+=rect(u,pad+(p-1)*(w-pad*2+gap)/2,y,(w-pad*2-gap)/2,ch);}continue;}let x=pad;T.positions.forEach((p,i)=>{const u=map.get(f+'-'+p);if(u)svg+=rect(u,x,y,cw,ch);else svg+=`<rect x="${x}" y="${y}" width="${cw}" height="${ch}" fill="#D4D6CC"/>`;x+=cw+(i===T.external.length-1?spine:gap);});}
- return svg+`<rect x="-2" y="${h}" width="${w+4}" height=".7" fill="#BDC1B3"/></g></svg>`;
+ for(let f=T.floors;f>=1;f--){const y=G.crown+(T.floors-f)*pitch+.4,ch=Math.max(1,pitch-.8);if(f===T.floors){for(let p=1;p<=2;p++){const u=map.get(f+'-'+p);if(u)svg+=rect(u,pad+(p-1)*(w-pad*2+gap)/2,y,(w-pad*2-gap)/2,ch);}continue;}let x=pad;T.positions.forEach((p,i)=>{const u=map.get(f+'-'+p);if(u)svg+=rect(u,x,y,cw,ch);else svg+=`<rect x="${x}" y="${y}" width="${cw}" height="${ch}" fill="var(--tw-band)"/>`;x+=cw+(i===T.external.length-1?spine:gap);});}
+ return svg+`<rect x="-2" y="${h}" width="${w+4}" height=".7" fill="var(--tw-base)"/></g></svg>`;
 }
 function renderOverview(){const ts=allowedTowers();$('#towerOverview').innerHTML=`<div class="tower-stage" style="grid-template-columns:repeat(${ts.length},minmax(0,1fr))" data-scroll="towers">${ts.map(t=>{const us=DATA.units.filter(u=>u.tower===t),n=us.filter(u=>u.status==='available'&&!u.review_required).length,c=counts(us);return `<article class="tower-card"><div class="tower-label"><button class="tower-title" data-tower="${t}">${t}</button><span class="tower-floor">${TYPES[t[0]].floors} طابقاً</span></div><div class="tower-drawing" data-tower="${t}">${towerSVG(t)}</div><div class="tower-info"><div class="tower-info-main"><div><b>${n}</b><span>متاح للحجز</span></div><button class="tower-open" data-tower="${t}" aria-label="فتح برج ${t}">${icon('arrow')}</button></div>${stackBar(us)}<div class="tower-meta"><span>${us.length} وحدة</span><span>${c.review} للمراجعة</span></div></div></article>`;}).join('')}</div><div class="overview-bottom"><span class="hint">${icon('info')}اللون يوضح الحالة المسجلة؛ الحجز يتطلب اعتماد البيانات.</span><span>الخدمات والمداخل خارج عدد الوحدات السكنية.</span></div>`;}
 function renderBoard(){const T=TYPES[state.tower[0]],us=baseUnits(),map=new Map(us.map(u=>[u.floor+'-'+u.pos,u])),n=T.positions.length,tpl=`38px repeat(${n},minmax(0,1fr))`;
@@ -385,7 +387,7 @@ function renderOps(){
      <div class="ops-floor-card" id="opsFloorCard" hidden></div>
      <div class="ops-stage-note" id="opsStageNote">جارٍ تحضير المجسّم…</div>
     </div>
-    <p class="ops-hero-hint">${icon('info')}اضغط طابقاً من المقياس لعرض شققه · ترتيب الشقق في البطاقة تخطيطي، فالنموذج لا يربط هندسته بأكواد الوحدات</p>
+    <p class="ops-hero-hint">${icon('info')}اختر البرج من الأعلى · اضغط طابقاً من المقياس لعرض شققه · ترتيب الشقق في البطاقة تخطيطي، فالنموذج لا يربط هندسته بأكواد الوحدات</p>
    </section>
 
    <section class="ops-panel ops-gauge-panel">
@@ -664,6 +666,17 @@ $('#moreFilters').onclick=()=>{state.advanced=!state.advanced;renderUnits();};
 [['viewFilter','view'],['areaFilter','area'],['bandFilter','band'],['reviewFilter','review']].forEach(([id,key])=>$('#'+id).onchange=e=>{state[key]=e.target.value;state.page=1;state.selected=null;renderUnits();});
 $('#floorJump').onchange=e=>{const row=$('#floor-'+e.target.value),scroll=$('.board-scroll');if(row&&scroll)scroll.scrollTo({top:row.offsetTop-$('.board-head').offsetHeight,behavior:'smooth'});};
 $('#closeDialog').onclick=closeDialog;$('#detailBackdrop').onclick=()=>closeDetail();
+function currentTheme(){return document.documentElement.dataset.theme==='light'?'light':'dark';}
+function applyTheme(mode){
+ document.documentElement.dataset.theme=mode;
+ try{localStorage.setItem('gc-theme',mode);}catch{}
+ const btn=$('#themeToggle');
+ if(btn){btn.innerHTML=icon(mode==='dark'?'moon':'sun');btn.setAttribute('aria-label',mode==='dark'?'التحويل إلى الوضع الفاتح':'التحويل إلى الوضع الداكن');}
+ const meta=document.querySelector('meta[name=theme-color]');
+ if(meta)meta.setAttribute('content',mode==='dark'?'#0E131D':'#5E1421');
+}
+$('#themeToggle').onclick=()=>applyTheme(currentTheme()==='dark'?'light':'dark');
+applyTheme(currentTheme());
 $('#notificationButton').onclick=showNotifications;
 $('#logoutButton').onclick=async()=>{try{await api('/api/logout',{method:'POST',body:{}});}catch{}lockSession();$('#authError').hidden=true;session=await api('/api/session');renderAuth();};
 $('#importFile').onchange=e=>{uploadPreview(e.target.files[0]);e.target.value='';};
