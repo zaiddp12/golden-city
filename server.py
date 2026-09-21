@@ -576,19 +576,21 @@ class Handler(BaseHTTPRequestHandler):
         # No query strings, bodies, client records, passwords or cookies in logs.
         sys.stderr.write("%s %s %s\n" % (now(), self.command, self.path.split("?")[0]))
 
-    def headers_common(self):
+    def headers_common(self, cache=None):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Referrer-Policy", "no-referrer")
-        self.send_header("Cache-Control", "no-store")
+        # الافتراض no-store لأن أغلب ما يمرّ هنا بياناتُ حجوزات وعملاء لا تُخزَّن
+        # على القرص. الاستثناء الوحيد أصولٌ ثابتة كبيرة يُمرَّر لها cache صراحةً.
+        self.send_header("Cache-Control", cache or "no-store")
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
         self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
         self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 
-    def respond(self, status=200, data=None, content_type="application/json; charset=utf-8", filename=None):
+    def respond(self, status=200, data=None, content_type="application/json; charset=utf-8", filename=None, cache=None):
         content = packed(data).encode("utf-8") if not isinstance(data, bytes) else data
         self.send_response(status)
-        self.headers_common()
+        self.headers_common(cache)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(content)))
         if filename:
@@ -763,7 +765,12 @@ class Handler(BaseHTTPRequestHandler):
         if not target.is_relative_to((ROOT / "static").resolve()) or not target.is_file():
             fail(404, "الملف غير موجود.")
         mime = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".woff": "font/woff", ".wasm": "application/wasm", ".json": "application/json", ".glb": "model/gltf-binary", ".png": "image/png"}.get(target.suffix, "application/octet-stream")
-        self.respond(data=target.read_bytes(), content_type=mime)
+        # مجسّمات الأبراج وحدها تُخزَّن: خمسة عشر ميغابايت تُحمَّل في كل زيارة بلا
+        # ذلك. وهي أصول ثابتة لا تحمل بيانات عملاء، فتخزينها لا يخالف سبب no-store.
+        # أما الواجهة فتبقى بلا تخزين حتى يظهر كل نشر فوراً.
+        heavy = target.suffix in (".glb", ".woff2", ".woff", ".wasm")
+        cache = "public, max-age=31536000, immutable" if heavy else None
+        self.respond(data=target.read_bytes(), content_type=mime, cache=cache)
 
     def auth(self, path, payload, session):
         app = self.app
